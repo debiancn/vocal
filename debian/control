@@ -1,28 +1,35 @@
-Source: com.github.needle-and-thread.vocal
+Source: vocal
 Section: sound
 Priority: optional
-Maintainer: Nathan Dyer <mail@nathandyer.me>
-Build-Depends: cmake (>= 2.8),
-               debhelper (>= 8.0.0),
-               libgee-0.8-dev,
-               libgranite-dev,
-               libgtk-3-dev (>= 3.14),
-               valac (>= 0.18.1),
-               libunity-dev,
-               libnotify-dev,
-               libxml2-dev,
-               libgstreamer1.0-dev,
-               libgstreamer-plugins-base1.0-dev,
-               libclutter-gtk-1.0-dev,
-               libclutter-1.0-dev,
-               libclutter-gst-3.0-dev,
-               libsqlite3-dev,
-               libsoup2.4-dev,
-               libwebkit2gtk-4.0-dev
-               
-Standards-Version: 3.9.3
-Package: com.github.needle-and-thread.vocal
+Maintainer: Boyuan Yang <073plan@gmail.com>
+Build-Depends:
+ cmake (>= 2.8),
+ debhelper (>= 11~),
+ libclutter-1.0-dev,
+ libclutter-gst-3.0-dev,
+ libclutter-gtk-1.0-dev,
+ libgee-0.8-dev,
+ libgranite-dev,
+ libgstreamer-plugins-base1.0-dev,
+ libgstreamer1.0-dev,
+ libgtk-3-dev (>= 3.14),
+ libnotify-dev,
+ libsoup2.4-dev,
+ libsqlite3-dev,
+ libwebkit2gtk-4.0-dev,
+ libxml2-dev,
+ valac (>= 0.18.1),
+Standards-Version: 4.1.3
+Homepage: https://github.com/needle-and-thread/vocal
+Vcs-Git: https://github.com/debiancn/vocal.git
+Vcs-Browser: https://github.com/debiancn/vocal
+
+Package: vocal
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}
-Description: Vocal
- Simple podcast client for the modern desktop.
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Description: Simple podcast client for the modern desktop
+ Vocal is a powerful, fast and intuitive application that helps users
+ find new podcasts, manage their libraries and enjoy the best
+ independent audio and video publishing offerings.

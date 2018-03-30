@@ -1,13 +1,5 @@
-com.github.needle-and-thread.vocal (2.0) trusty; urgency=low
+vocal (2.1.6+git20180202-1) unstable; urgency=medium
 
-  * iTunes Store integration
-  * An all-new playback queue
-  * Local and remote searching
-  * Better notification management 
-  * A new podcast view
-  * HTML shownotes
-  * Improved playback support
-  * Higher resolution album art
-  * and much more!
+  * Repack against Debian Unstable.
 
- -- Nathan Dyer <mail@nathandyer.me>  Sat, 31 Oct 2015 17:00:00 -0500
+ -- Boyuan Yang <073plan@gmail.com>  Fri, 30 Mar 2018 11:16:52 +0800
