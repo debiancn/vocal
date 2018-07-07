@@ -1,0 +1,9 @@
+0001-Added-a-basic-backend-for-the-Creative-Commons-imple.patch
+0002-Use-prepared-statments-in-sql-queries.patch
+0003-Check-for-string-return-value-for-podcast-summary-ca.patch
+0004-Ensure-updates-to-the-new-episode-UI-happen-in-the-m.patch
+0005-Handle-case-when-sorting-new-episodes-with-null-date.patch
+0006-Fixes-327.patch
+0007-Fixed-an-issue-where-the-loading-of-iTunes-store-res.patch
+0008-Fixes-328.patch
+0009-desktop-Add-zh_CN-string.patch

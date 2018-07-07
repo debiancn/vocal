@@ -1,0 +1,44 @@
+From: psetq <me@psetq.com>
+Date: Thu, 28 Jun 2018 09:42:44 -0700
+Subject: Check for string return value for podcast summary causing crash
+ reported in issue #315
+
+---
+ src/Widgets/DirectoryArt.vala | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/src/Widgets/DirectoryArt.vala b/src/Widgets/DirectoryArt.vala
+index a667b73..7be5df3 100644
+--- a/src/Widgets/DirectoryArt.vala
++++ b/src/Widgets/DirectoryArt.vala
+@@ -74,7 +74,6 @@ namespace Vocal {
+ 			summary_label = new Gtk.Label ("");
+ 			summary_label.wrap = true;
+ 			details_popover.add(summary_label);
+-			
+ 
+ 			details_button.clicked.connect(() => {
+ 				if(summary.length > 0) {
+@@ -83,14 +82,19 @@ namespace Vocal {
+ 					var itunes = new iTunesProvider();
+ 					string rss_url = itunes.get_rss_from_itunes_url(url);
+ 					var feed_parser = new FeedParser();
++
+ 					string details_summary =  feed_parser.find_description_from_file(rss_url);
+-					summary_label.set_text(details_summary.length > 0 ? details_summary : _("No summary available."));
++					if (details_summary == null || details_summary.strip ().length == 0) {
++						details_summary = _("No summary available.");
++					}
++
++					summary_label.set_text (details_summary);
+ 					feed_parser = null;
+-                }
++				}
+ 				summary_label.max_width_chars = 64;
+ 				summary_label.margin = 20;
+ 				details_popover.show_all();
+-			});	
++			});
+ 
+             var subscribe_button = new Gtk.Button.from_icon_name("list-add-symbolic", Gtk.IconSize.SMALL_TOOLBAR);
+             subscribe_button.tooltip_text = _("Subscribe");

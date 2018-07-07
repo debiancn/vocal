@@ -1,0 +1,22 @@
+From: Boyuan Yang <073plan@gmail.com>
+Date: Sat, 7 Jul 2018 11:30:47 +0800
+Subject: desktop: Add zh_CN string
+
+---
+ data/com.github.needle-and-thread.vocal.desktop | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/data/com.github.needle-and-thread.vocal.desktop b/data/com.github.needle-and-thread.vocal.desktop
+index 8782b77..33c787a 100644
+--- a/data/com.github.needle-and-thread.vocal.desktop
++++ b/data/com.github.needle-and-thread.vocal.desktop
+@@ -11,6 +11,9 @@ X-PulseAudio-Properties=media.role=music
+ Actions=AboutDialog;
+ 
+ Name[en_US]=Vocal
++Comment[zh_CN]=订阅、下载并聆听 podcast
++GenericName[zh_CN]=Podcast 管理工具
++Keywords=Podcast;Vocal;
+ 
+ [Desktop Action AboutDialog]
+ Exec=com.github.needle-and-thread.vocal --about

@@ -1,0 +1,35 @@
+From: Nathan Dyer <nathandyer@fastmail.com>
+Date: Wed, 4 Jul 2018 16:52:41 -0400
+Subject: Fixes #327
+
+---
+ src/Controller.vala | 2 +-
+ src/MainWindow.vala | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/Controller.vala b/src/Controller.vala
+index b202192..57da103 100644
+--- a/src/Controller.vala
++++ b/src/Controller.vala
+@@ -44,7 +44,7 @@ namespace Vocal {
+     
+         /* Runtime flags */
+         
+-        public bool first_run = false;
++        public bool first_run = true;
+         public bool newly_launched = true;
+         public bool library_empty = false;
+         public bool should_quit_immediately = true;
+diff --git a/src/MainWindow.vala b/src/MainWindow.vala
+index 429e6b6..810b938 100644
+--- a/src/MainWindow.vala
++++ b/src/MainWindow.vala
+@@ -369,7 +369,7 @@ namespace Vocal {
+             
+             info ("Creating directory view.");
+             
+-            directory = new DirectoryView(controller.itunes, show_complete_button);
++            directory = new DirectoryView(controller.itunes, controller.first_run);
+             directory.on_new_subscription.connect(on_new_subscription);
+             directory.return_to_library.connect(on_return_to_library);
+             directory.return_to_welcome.connect(() => {

@@ -1,0 +1,29 @@
+From: Nathan Dyer <nathandyer@fastmail.com>
+Date: Wed, 4 Jul 2018 17:02:42 -0400
+Subject: Fixed an issue where the loading of iTunes store results was never
+ triggered unless the toolbar button was clicked. Fixes #326
+
+---
+ src/MainWindow.vala | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/MainWindow.vala b/src/MainWindow.vala
+index 810b938..1afddba 100644
+--- a/src/MainWindow.vala
++++ b/src/MainWindow.vala
+@@ -370,6 +370,7 @@ namespace Vocal {
+             info ("Creating directory view.");
+             
+             directory = new DirectoryView(controller.itunes, controller.first_run);
++            directory.load_top_podcasts();
+             directory.on_new_subscription.connect(on_new_subscription);
+             directory.return_to_library.connect(on_return_to_library);
+             directory.return_to_welcome.connect(() => {
+@@ -427,7 +428,6 @@ namespace Vocal {
+             toolbar.playlist_button.clicked.connect(() => { queue_popover.show_all(); });
+ 
+             toolbar.store_selected.connect (() => {
+-                directory.load_top_podcasts();
+                 details.pane_should_hide ();
+                 switch_visible_page (directory_scrolled);
+             });

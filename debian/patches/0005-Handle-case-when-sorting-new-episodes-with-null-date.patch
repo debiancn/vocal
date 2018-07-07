@@ -1,0 +1,26 @@
+From: psetq <me@psetq.com>
+Date: Fri, 29 Jun 2018 10:17:52 -0700
+Subject: Handle case when sorting new episodes with null datetime_released
+ value.
+
+---
+ src/Widgets/NewEpisodesView.vala | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/Widgets/NewEpisodesView.vala b/src/Widgets/NewEpisodesView.vala
+index 9f605f0..30dfc19 100644
+--- a/src/Widgets/NewEpisodesView.vala
++++ b/src/Widgets/NewEpisodesView.vala
+@@ -87,6 +87,12 @@ namespace Vocal {
+                         elm.insert_sorted (e, (a, b) => {
+                                 var e1 = (Episode) a;
+                                 var e2 = (Episode) b;
++                                if (e2.datetime_released == null) {
++                                    if (e1.datetime_released == null) {
++                                        return 0;
++                                    }
++                                    return -1;
++                                }
+                                 return  e2.datetime_released.compare(e1.datetime_released);
+                         });
+                     }
