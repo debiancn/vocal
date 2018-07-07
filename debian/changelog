@@ -1,3 +1,9 @@
+vocal (2.2.0-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Boyuan Yang <073plan@gmail.com>  Sat, 07 Jul 2018 11:24:43 +0800
+
 vocal (2.1.6+git20180202-1) unstable; urgency=medium
 
   * Repack against Debian Unstable.

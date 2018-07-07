@@ -15,3 +15,6 @@ export VALAFLAGS:=$(foreach w,$(CPPFLAGS) $(CFLAGS) $(LDFLAGS),-X $(w))
 
 %:
 	dh $@
+
+override_dh_missing:
+	dh_missing --fail-missing
