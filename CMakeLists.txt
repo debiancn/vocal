@@ -5,8 +5,8 @@ cmake_policy (VERSION 2.6)
 set (DATADIR "${CMAKE_INSTALL_PREFIX}/share")
 set (PKGDATADIR "${DATADIR}/vocal")
 set (GETTEXT_PACKAGE "vocal")
-set (RELEASE_NAME "Gomer")
-set (VERSION "2.1.6")
+set (RELEASE_NAME "Sleek Black Beauty")
+set (VERSION "2.2.0")
 set (VERSION_INFO "Release")
 set (EXEC_NAME "com.github.needle-and-thread.vocal")
 set (PREFIX ${CMAKE_INSTALL_PREFIX})
@@ -125,6 +125,7 @@ vala_precompile(VALA_C ${EXEC_NAME}
     src/Widgets/VideoControls.vala
     src/Widgets/DirectoryView.vala
     src/Widgets/DirectoryArt.vala
+    src/Widgets/NewEpisodesView.vala
     src/Widgets/CloudLoginDialog.vala
     src/Widgets/SearchResultsView.vala
     src/Widgets/PodcastView.vala
@@ -138,6 +139,8 @@ vala_precompile(VALA_C ${EXEC_NAME}
     src/Utils/Utils.vala
     src/Utils/MPRIS.vala
     src/Utils/iTunesProvider.vala
+    src/Utils/SoupClient.vala
+    src/Utils/XmlUtils.vala
     src/Services/ImageCache.vala
 PACKAGES
     ${DEPS_PACKAGES}

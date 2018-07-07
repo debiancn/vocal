@@ -39,6 +39,7 @@ namespace Vocal {
         public Welcome welcome;
         private DirectoryView directory;
         public SearchResultsView search_results_view;
+        public NewEpisodesView new_episodes_view;
         private Gtk.Stack notebook;
         public PodcastView details;
         private Gtk.Box import_message_box;
@@ -291,6 +292,20 @@ namespace Vocal {
                     _("If you have exported feeds from another podcast manager, import them here."));
             welcome.activated.connect(on_welcome);
             
+            info ("Creating new episodes view.");
+            new_episodes_view = new NewEpisodesView (controller);
+            new_episodes_view.go_back.connect (() => {
+                switch_visible_page(all_scrolled);
+            });
+            new_episodes_view.play_episode_requested.connect((episode) => {
+                play_different_track(episode);
+            });
+            new_episodes_view.add_all_new_to_queue.connect ((episodes) => {
+                foreach (Episode e in episodes) {
+                    enqueue_episode (e);
+                }
+            });
+                        
             info ("Creating scrolled containers and album art views.");
 
             // Set up scrolled windows so that content will scoll instead of causing the window to expand
@@ -298,7 +313,7 @@ namespace Vocal {
             directory_scrolled = new Gtk.ScrolledWindow (null, null);
             search_results_scrolled = new Gtk.ScrolledWindow(null, null);
             search_results_box = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
-            search_results_scrolled.add(search_results_box);
+            search_results_scrolled.add (search_results_box);
 
 		    // Set up the IconView for all podcasts
 		    all_flowbox = new Gtk.FlowBox();
@@ -331,7 +346,7 @@ namespace Vocal {
             // Set up the box that gets displayed when importing from .OPML or .XML files during the first launch
             import_message_box = new Gtk.Box(Gtk.Orientation.VERTICAL, 25);
             var import_h1_label = new Gtk.Label(_("Good Stuff is On Its Way"));
-            var import_h3_label = new Gtk.Label(_("If you are importing several podcasts it can take a few minutes. Your controller.library will be ready shortly."));
+            var import_h3_label = new Gtk.Label(_("If you are importing several podcasts it can take a few minutes. Your library will be ready shortly."));
             import_h1_label.get_style_context ().add_class("h1");
             import_h3_label.get_style_context ().add_class("h3");
             import_h1_label.margin_top = 200;
@@ -343,11 +358,12 @@ namespace Vocal {
             import_message_box.add(spinner);
 
             // Add everything into the notebook (except for the iTunes store and search view)
-            notebook.add_titled(welcome, "welcome", _("Welcome"));
-            notebook.add_titled(import_message_box, "import", _("Importing"));
-            notebook.add_titled(all_scrolled, "all", _("All Podcasts"));
-            notebook.add_titled(details, "details", _("Details"));
-            notebook.add_titled(video_widget, "video_player", _("Video"));
+            notebook.add_titled (welcome, "welcome", _("Welcome"));
+            notebook.add_titled (import_message_box, "import", _("Importing"));
+            notebook.add_titled (all_scrolled, "all", _("All Podcasts"));
+            notebook.add_titled (details, "details", _("Details"));
+            notebook.add_titled (new_episodes_view, "new_episodes", _("New Episodes"));
+            notebook.add_titled (video_widget, "video_player", _("Video"));
             
             bool show_complete_button = controller.first_run || controller.library_empty;
             
@@ -360,7 +376,7 @@ namespace Vocal {
                 switch_visible_page(welcome);
             });
             directory_scrolled.add(directory);
-            
+
 
             // Add the remaining widgets to the notebook. At this point, the gang's all here
             notebook.add_titled(directory_scrolled, "directory", _("Browse Podcast Directory"));
@@ -399,6 +415,10 @@ namespace Vocal {
                 settings_dialog.show_name_label_toggled.connect (on_show_name_label_toggled);
                 settings_dialog.show_all ();
             });
+            
+            toolbar.new_episodes_button.clicked.connect (() => {
+                switch_visible_page (new_episodes_view);
+            });
 
             toolbar.refresh_selected.connect (controller.on_update_request);
             toolbar.play_pause_selected.connect (controller.play_pause);
@@ -407,6 +427,7 @@ namespace Vocal {
             toolbar.playlist_button.clicked.connect(() => { queue_popover.show_all(); });
 
             toolbar.store_selected.connect (() => {
+                directory.load_top_podcasts();
                 details.pane_should_hide ();
                 switch_visible_page (directory_scrolled);
             });
@@ -483,139 +504,136 @@ namespace Vocal {
             }
             info("Window initialization complete.");
         }
-
+        
         /*
          * Populates the three views (all, audio, video) from the contents of the controller.library
          */
-        public async void populate_views() {
+        public void populate_views() {
+        
+    
+        	if(!controller.currently_repopulating)
+        	{
 
-            SourceFunc callback = populate_views.callback;
+                info ("Populating the main podcast view.");
+        		controller.currently_repopulating = true;
+	            bool has_video = false;
 
-            ThreadFunc<void*> run = () => {
+                // If it's not the first run or newly launched go ahead and remove all the widgets from the flowboxes
+                if(!controller.first_run && !controller.newly_launched) {
+    	            for(int i = 0; i < all_art.size; i++)
+    	            {
+    	            	all_flowbox.remove(all_flowbox.get_child_at_index(0));
+    	            }
 
-            	if(!controller.currently_repopulating)
-            	{
+                    all_art.clear();
+                }
 
-            		controller.currently_repopulating = true;
-    	            bool has_video = false;
+                //TODO: Move this to the controller
+                
+                info("Restoring last played media.");
+	            // If the program was just launched, check to see what the last played media was
+	            if(controller.newly_launched) {
 
-                    // If it's not the first run or newly launched go ahead and remove all the widgets from the flowboxes
-                    if(!controller.first_run && !controller.newly_launched) {
-        	            for(int i = 0; i < all_art.size; i++)
-        	            {
-        	            	all_flowbox.remove(all_flowbox.get_child_at_index(0));
-        	            }
+                    current_widget = all_scrolled;
 
-                        all_art.clear();
+	                if(controller.settings.last_played_media != null && controller.settings.last_played_media.length > 1) {
+
+	                    // Split the media into two different strings
+	                    string[] fields = controller.settings.last_played_media.split(",");
+	                    bool found = false;
+	                    foreach(Podcast podcast in controller.library.podcasts) {
+
+	                        if(!found) {
+	                            if(podcast.name == fields[1]) {
+	                                found = true;
+
+	                                // Attempt to find the matching episode, set it as the current episode, and display the information in the box
+	                                foreach(Episode episode in podcast.episodes) {
+	                                    if(episode.title == fields[0]){
+	                                        controller.current_episode = episode;
+	                                        toolbar.playback_box.set_info_title(controller.current_episode.title.replace("%27", "'"), controller.current_episode.parent.name.replace("%27", "'"));
+	                                        controller.track_changed(controller.current_episode.title, controller.current_episode.parent.name, controller.current_episode.parent.coverart_uri, (uint64) controller.player.duration);
+
+	                                        try {
+
+	                                            controller.player.set_episode(controller.current_episode);
+                                                controller.player.set_position(controller.current_episode.last_played_position);
+	                                            shownotes.set_notes_text(episode.description);
+
+	                                        } catch(Error e) {
+	                                            warning(e.message);
+	                                        }
+
+	                                        if(controller.current_episode.last_played_position != 0) {
+	                                            toolbar.show_playback_box();
+	                                        }
+	                                        else {
+	                                            toolbar.hide_playback_box();
+	                                        }
+	                                    }
+	                                }
+	                            }
+	                        }
+	                    }
+	                }
+	            }
+
+
+	            // Refill the controller.library based on what is stored in the database (if it's not newly launched, in
+	            // which case it has already been filled)
+	            if(!controller.newly_launched){
+	                info ("Refilling library.");
+	                controller.library.refill_library();
+	            }
+
+	            // Clear flags since we have an established controller.library at this point
+	            controller.newly_launched = false;
+	            controller.first_run = false;
+	            controller.library_empty = false;
+	            
+	            info ("Creating coverart for each podcast in library.");
+
+                foreach(Podcast podcast in controller.library.podcasts) {
+
+                    // Determine whether or not there are video podcasts
+                    if(podcast.content_type == MediaType.VIDEO) {
+                        has_video = true;
+                    }
+                    
+                    CoverArt a = new CoverArt(podcast.coverart_uri.replace("%27", "'"), podcast, true);
+                    
+                    a.get_style_context().add_class("coverart");
+                    a.halign = Gtk.Align.START;
+                    
+                    int currently_unplayed = 0;
+                    foreach(Episode e in podcast.episodes)
+                    {
+                        if (e.status == EpisodeStatus.UNPLAYED)
+                        {
+                            currently_unplayed++;
+                        }
                     }
 
+                    if(currently_unplayed > 0)
+                    {
+                        a.set_count(currently_unplayed);
+                        a.show_count();
+                    }
 
-    	            // If the program was just launched, check to see what the last played media was
-    	            if(controller.newly_launched) {
+                    else
+                    {
+                        a.hide_count();
+                    }
 
-                        current_widget = all_scrolled;
+                    all_art.add(a);
+                    
+                }
 
-    	                if(controller.settings.last_played_media != null && controller.settings.last_played_media.length > 1) {
+	            controller.currently_repopulating = false;
+        	}
 
-    	                    // Split the media into two different strings
-    	                    string[] fields = controller.settings.last_played_media.split(",");
-    	                    bool found = false;
-    	                    foreach(Podcast podcast in controller.library.podcasts) {
-
-    	                        if(!found) {
-    	                            if(podcast.name == fields[1]) {
-    	                                found = true;
-
-    	                                // Attempt to find the matching episode, set it as the current episode, and display the information in the box
-    	                                foreach(Episode episode in podcast.episodes) {
-    	                                    if(episode.title == fields[0]){
-    	                                        controller.current_episode = episode;
-    	                                        toolbar.playback_box.set_info_title(controller.current_episode.title.replace("%27", "'"), controller.current_episode.parent.name.replace("%27", "'"));
-    	                                        controller.track_changed(controller.current_episode.title, controller.current_episode.parent.name, controller.current_episode.parent.coverart_uri, (uint64) controller.player.duration);
-
-    	                                        try {
-
-    	                                            controller.player.set_episode(controller.current_episode);
-                                                    controller.player.set_position(controller.current_episode.last_played_position);
-    	                                            shownotes.set_notes_text(episode.description);
-
-    	                                        } catch(Error e) {
-    	                                            warning(e.message);
-    	                                        }
-
-    	                                        if(controller.current_episode.last_played_position != 0) {
-    	                                            toolbar.show_playback_box();
-    	                                        }
-    	                                        else {
-    	                                            toolbar.hide_playback_box();
-    	                                        }
-    	                                    }
-    	                                }
-    	                            }
-    	                        }
-    	                    }
-    	                }
-    	            }
-
-
-    	            // Refill the controller.library based on what is stored in the database (if it's not newly launched, in
-    	            // which case it has already been filled)
-    	            if(!controller.newly_launched){
-    	                controller.library.refill_library();
-    	            }
-
-    	            // Clear flags since we have an established controller.library at this point
-    	            controller.newly_launched = false;
-    	            controller.first_run = false;
-    	            controller.library_empty = false;
-
-	                foreach(Podcast podcast in controller.library.podcasts) {
-
-	                    // Determine whether or not there are video podcasts
-	                    if(podcast.content_type == MediaType.VIDEO) {
-	                        has_video = true;
-	                    }
-                        
-                        CoverArt a = new CoverArt(podcast.coverart_uri.replace("%27", "'"), podcast, true);
-                        
-                        a.get_style_context().add_class("coverart");
-                        a.halign = Gtk.Align.START;
-                        
-                        int currently_unplayed = 0;
-                        foreach(Episode e in podcast.episodes)
-                        {
-                            if (e.status == EpisodeStatus.UNPLAYED)
-                            {
-                                currently_unplayed++;
-                            }
-                        }
-
-                        if(currently_unplayed > 0)
-                        {
-                            a.set_count(currently_unplayed);
-                            a.show_count();
-                        }
-
-                        else
-                        {
-                            a.hide_count();
-                        }
-
-                        all_art.add(a);
-                        
-	                }
-
-    	            controller.currently_repopulating = false;
-            	}
-
-                    Idle.add((owned) callback);
-                    return null;
-                };
-
-
-            Thread.create<void*>(run, false);
-
-            yield;
+            
+            info("Adding coverart to view.");
 
             foreach(CoverArt a in all_art) {
                 all_flowbox.add(a);
@@ -626,13 +644,37 @@ namespace Vocal {
                 f.halign = Gtk.Align.CENTER;
                 f.valign = Gtk.Align.START;
             }
+            
+            new_episodes_view.populate_episodes_list ();
+            
 
             // If the app is supposed to open hidden, don't present the window. Instead, hide it
             if(!controller.open_hidden && !controller.is_closing)
                 show_all();
+                
         }
 
+        /*
+         * Populates the three views (all, audio, video) from the contents of the controller.library
+         */
+        public async void populate_views_async() {
+        
 
+            SourceFunc callback = populate_views_async.callback;
+
+            ThreadFunc<void*> run = () => {
+
+            	populate_views ();
+
+                Idle.add((owned) callback);
+                return null;
+            };
+
+
+            Thread.create<void*>(run, false);
+
+            yield;
+        }
 
         /*
          * When a user double-clicks and episode in the queue, remove it from the queue and
@@ -655,11 +697,15 @@ namespace Vocal {
         /*
          * Switches the current track and requests the newly selected track starts playing
          */
-        private void play_different_track () {
+        private void play_different_track (Episode? episode = null) {
 
             // Get the episode
-            int index = details.current_episode_index;
-            controller.current_episode = details.podcast.episodes[index];
+            if (episode == null) {
+                int index = details.current_episode_index;
+                controller.current_episode = details.podcast.episodes[index];
+            } else {
+                controller.current_episode = episode;
+            }
 
             controller.player.pause();
             controller.play();
@@ -709,12 +755,10 @@ namespace Vocal {
          * requesting the download from the controller.library
          */
         public void download_episode(Episode episode) {
-
-            // Show the download menuitem
+            //  Show the download menuitem
             toolbar.show_download_button();
 
-
-            // Begin the process of downloading the episode (asynchronously)
+            //  Begin the process of downloading the episode (asynchronously)
             var details_box = controller.library.download_episode(episode);
             details_box.cancel_requested.connect(on_download_canceled);
 
@@ -729,8 +773,7 @@ namespace Vocal {
                 }
             });
 
-
-            // Add the download to the downloads popup
+            //  Add the download to the downloads popup
             downloads.add_download(details_box);
         }
 
@@ -834,64 +877,54 @@ namespace Vocal {
                 var loop = new MainLoop();
                 controller.library.add_from_OPML(file_name, (obj, res) => {
 
-                    bool success = controller.library.add_from_OPML.end(res);
+                    Gee.ArrayList<string> failed_feed_list = controller.library.add_from_OPML.end(res);
 
-                    if(success) {
+                    if(!controller.player.playing) {
+                        toolbar.hide_playback_box();
+                    }
 
-                        if(!controller.player.playing)
-                            toolbar.hide_playback_box();
-
-                        // Is there now at least one podcast in the controller.library?
-                        if(controller.library.podcasts.size > 0) {
-
-                            // Make the refresh and export items sensitive now
-                            toolbar.export_item.sensitive = true;
-
-                            toolbar.show_shownotes_button();
-                            toolbar.show_playlist_button();
-
-                            populate_views();
-
-                            if(current_widget == import_message_box) {
-                                switch_visible_page(all_scrolled);
-                            }
-
-                            controller.library_empty = false;
-
-                            show_all();
-                        }
-
+                    if(failed_feed_list.size == 0) {
+                        info("Successfully imported all podcasts from OPML.");
                     } else {
-
-                        if(!controller.player.playing)
-                            toolbar.hide_playback_box();
-
-                        var add_err_dialog = new Gtk.MessageDialog(add_feed,
-                            Gtk.DialogFlags.MODAL,Gtk.MessageType.ERROR,
-                            Gtk.ButtonsType.OK, "");
-                            add_err_dialog.response.connect((response_id) => {
-                                add_err_dialog.destroy();
-                            });
-                            
-                        // Determine if it was a network issue, or just a problem with the feed
-                        
-                        bool network_okay = Utils.confirm_internet_functional();
-                        
-                        string error_message;
-                        
-                        if(network_okay) {
-                            error_message = _("Please check that you selected the correct file and that it is not corrupted.");
-                        } else {
-                            error_message = _("There seems to be a problem with your internet connection. Make sure you are online and then try again.");
+                        string failed_feeds = "";
+                        foreach(string failed_feed in failed_feed_list) {
+                            failed_feeds = "%s\n %s".printf(failed_feeds, failed_feed);
                         }
+                        string error_message = "Vocal was unable to import podcasts from the following feeds in the OPML file. \n%s\n".printf(failed_feeds);
+                        warning(error_message);
 
                         var error_img = new Gtk.Image.from_icon_name ("dialog-error", Gtk.IconSize.DIALOG);
+
+                        var add_err_dialog = new Gtk.MessageDialog(add_feed, Gtk.DialogFlags.MODAL,Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, "");
+                        add_err_dialog.response.connect((response_id) => {
+                            add_err_dialog.destroy();
+                        });
                         add_err_dialog.set_transient_for(this);
                         add_err_dialog.text = _("Error Importing from File");
                         add_err_dialog.secondary_text = error_message;
                         add_err_dialog.set_image(error_img);
                         add_err_dialog.show_all();
                     }
+                    // Is there now at least one podcast in the controller.library?
+                    if(controller.library.podcasts.size > 0) {
+                        controller.library_empty = false;
+                    }
+
+                    populate_views_async();
+
+                    // Make the refresh and export items sensitive now
+                    toolbar.export_item.sensitive = true;
+
+                    toolbar.show_shownotes_button();
+                    toolbar.show_playlist_button();
+
+                    if(current_widget == import_message_box) {
+                        switch_visible_page(all_scrolled);
+                    }
+
+                    controller.library_empty = false;
+
+                    show_all();
 
                     controller.currently_importing = false;
 
@@ -967,6 +1000,10 @@ namespace Vocal {
                 notebook.set_visible_child(welcome);
                 current_widget = welcome;
             }
+            else if (widget == new_episodes_view) {
+                notebook.set_visible_child (new_episodes_view);
+                current_widget = new_episodes_view;
+            }
             else {
                 info("Attempted to switch to a notebook page that didn't exist. This is likely a bug and might cause issues.");
             }
@@ -1028,7 +1065,12 @@ namespace Vocal {
          * the add feed menuitem
          */
         public void on_add_podcast_feed(int response_id) {
-            controller.add_podcast_feed(response_id, add_feed.entry.get_text(), null);
+            if(response_id == Gtk.ResponseType.OK) {
+                controller.add_podcast_feed(add_feed.entry.get_text());
+            }
+
+            // Destroy the add podcast dialog box
+            add_feed.destroy();
         }
 
 
@@ -1059,8 +1101,11 @@ namespace Vocal {
 		 * Called when the user requests to download all episodes from the sidepane
 		 */
         public void on_download_all_request() {
-            foreach(Episode e in controller.highlighted_podcast.episodes) {
-                download_episode(e);
+            // TODO: Warn user if too many (more than 50?) podcasts will be downloaded.
+            foreach(Episode episode in controller.highlighted_podcast.episodes) {
+                if(episode.current_download_status == DownloadStatus.NOT_DOWNLOADED) {
+                    download_episode(episode);
+                }
             }
         }
 
@@ -1183,6 +1228,8 @@ namespace Vocal {
                             a.hide_count();
                     }
                 }
+                
+                new_episodes_view.populate_episodes_list ();
             }
         }
 
@@ -1235,6 +1282,8 @@ namespace Vocal {
                         }
                     }
                 }
+                
+                new_episodes_view.populate_episodes_list ();
             }
         }
 
@@ -1356,16 +1405,10 @@ namespace Vocal {
          */
         public void on_new_subscription(string itunes_url) {
 
-            string name;
-
             // We are given an iTunes store URL. We need to get the actual RSS feed from  this
-            string rss = controller.itunes.get_rss_from_itunes_url(itunes_url, out name);
+            string rss = controller.itunes.get_rss_from_itunes_url(itunes_url);
 
-            if(name == null) {
-                name = "Unknown";
-            }
-
-            controller.add_podcast_feed(Gtk.ResponseType.OK, rss, name);
+            controller.add_podcast_feed(rss);
         }
 
 
@@ -1393,7 +1436,7 @@ namespace Vocal {
 					        controller.library.remove_podcast(controller.highlighted_podcast);
 					        controller.highlighted_podcast = null;
                             switch_visible_page(all_scrolled);
-                            populate_views();
+                            populate_views_async();
 					        break;
 				        case Gtk.ResponseType.NO:
 					        break;
@@ -1533,6 +1576,9 @@ namespace Vocal {
             } else {
                 controller.player.playing = false;
             }
+            
+            // Regenerate the new episode list in case the ended episode was one of the new episodes
+            new_episodes_view.populate_episodes_list ();
 
         }
 
